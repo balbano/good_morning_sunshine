@@ -7,7 +7,7 @@ The kettle will have an embedded microcontroller with a GPS receiver that activa
 
 A sort of celestial [Teasmade](http://en.wikipedia.org/wiki/Teasmade).
 
-{<1>}![Oster kettle](/content/images/2015/04/2015-04-17-15-33-04.jpg)
+![Oster kettle](http://www.brendanalbano.com/content/images/2015/04/2015-04-17-15-33-04.jpg)
 
 This Oster electric kettle came apart really easily. I chose a kettle with a digital on/off switch rather than the clicky mechanical type, as I figured it'd be easier to control.
 
