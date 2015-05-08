@@ -3,14 +3,26 @@
 // be accurate enough to achieve good results. For best results, use a board that supports 64-bit floats
 // like the Teensy 3.1, Teensy LC, Arduino Due, etc.
 
+#include <Wire.h>
+#include <Time.h>
+#include <DS1307RTC.h>
+
+const double chiLon = 87.6847;
+const double chiLat = 41.8369;
+const int onboardLed = 13;
+
 void setup() {
   Serial.begin(9600);
+  pinMode(onboardLed, OUTPUT);
 }
 
 void loop() {
+  blinkLedIfSunrise(chiLon, chiLat);
+  
   testJulianDate();
   testSunrise();
   testDateToTime();
+  printSunriseTodayUTC(chiLon, chiLat);
   
   Serial.println("--------------------------------------");
   Serial.println();
@@ -50,7 +62,7 @@ double gregorianToJulianDate(long gregorianYear, long gregorianMonth, long grego
   return julianDate;
 }
 
-String julianDateToTime(double julianDate) {
+tmElements_t julianDateToTime(double julianDate) {
   double timePortion = (julianDate - 0.5) - floor(julianDate - 0.5);
   
   double fractionalHours = timePortion * 24.0;
@@ -61,7 +73,17 @@ String julianDateToTime(double julianDate) {
   int m = floor(fmod(fractionalMinutes, 60.0));
   int s = floor(fmod(fractionalSeconds, 60.0));
   
-  String time = String(h) + ":" + String(m) + ":" + String(s);
+  tmElements_t time;
+  time.Hour = h;
+  time.Minute = m;
+  time.Second = s;
+  
+  return time;
+}
+
+String julianDateToTimeString(double julianDate) {
+  tmElements_t tm = julianDateToTime(julianDate);
+  String time = String(tm.Hour) + ":" + String(tm.Minute) + ":" + String(tm.Second);
   
   return time;
 }
@@ -151,7 +173,7 @@ void testJulianDate() {
   Serial.print(julianDate);
   Serial.println(" (rounded by serial.print()).");
   Serial.print("Back to normal represenation of time: ");
-  Serial.println(julianDateToTime(julianDate));
+  Serial.println(julianDateToTimeString(julianDate));
   Serial.println();
 }
 
@@ -180,14 +202,51 @@ void testSunrise() {
   Serial.print("Expected UTC:   ");
   Serial.println("11:08");
   Serial.print("Expected Calculated UTC: ");
-  Serial.println(julianDateToTime(expected_J_rise));
+  Serial.println(julianDateToTimeString(expected_J_rise));
   Serial.print("Calculated UTC: ");
-  Serial.println(julianDateToTime(J_rise));
+  Serial.println(julianDateToTimeString(J_rise));
   Serial.println();
 }
 
 void testDateToTime() {
   Serial.println("Converting 2015-04-24 7:8:9 to Julian Date and back again: ");
-  Serial.println(julianDateToTime(gregorianToJulianDate(2015, 4, 24, 7, 8, 9)));
+  Serial.println(julianDateToTimeString(gregorianToJulianDate(2015, 4, 24, 7, 8, 9)));
   Serial.println();
 }
+
+double sunriseToday(double lon, double lat) {
+  tmElements_t tm;
+  RTC.read(tm);
+  double julianDate = gregorianToJulianDate(tm.Year, tm.Month, tm.Day, tm.Hour, tm.Minute, tm.Second);
+  return sunrise(julianDate, lon, lat);
+}
+
+void printSunriseTodayUTC(double lon, double lat) {
+  double J_rise = sunriseToday(lon, lat);
+  Serial.print("Sunrise today is: ");
+  Serial.print(julianDateToTimeString(J_rise));
+  Serial.println(" UTC.");
+  tmElements_t sunrise = julianDateToTime(J_rise);
+  Serial.println();
+}
+
+void blinkOnboardLed(){
+  digitalWrite(onboardLed, HIGH);
+  delay(1000);
+  digitalWrite(onboardLed, LOW);
+  delay(1000);
+}
+
+void blinkLedIfSunrise(double lon, double lat) { 
+  tmElements_t currentTime;
+  RTC.read(currentTime);
+  
+  double J_rise = sunriseToday(lon, lat);
+  tmElements_t sunrise = julianDateToTime(J_rise);
+  
+  if(currentTime.Hour == sunrise.Hour && currentTime.Minute == sunrise.Minute){
+    blinkOnboardLed();
+  }
+}
+
+
